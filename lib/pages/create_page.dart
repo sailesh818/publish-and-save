@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -15,9 +16,10 @@ class _CreatePageState extends State<CreatePage> {
   final titlecontroller = TextEditingController();
   final desccontroller = TextEditingController();
 
-  void save() {
+  Future<void> saveNote({required bool isPublic}) async {
     final title = titlecontroller.text.trim();
     final desc = desccontroller.text.trim();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (title.isEmpty || desc.isEmpty) {
       ScaffoldMessenger.of(
@@ -27,14 +29,18 @@ class _CreatePageState extends State<CreatePage> {
       FirebaseFirestore.instance.collection('notes').add({
         'title': title,
         'content': desc,
+        'authorId': uid,
+        'visibility': isPublic ? 'public' : 'draft',
         'timestamp': Timestamp.now(),
       });
       titlecontroller.clear();
       desccontroller.clear();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Notes Saved successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isPublic ? 'Published!' : 'Notes Saved as draft'),
+        ),
+      );
     }
   }
 
@@ -70,7 +76,19 @@ class _CreatePageState extends State<CreatePage> {
                   maxLines: 7,
                 ),
                 SizedBox(height: 15),
-                ElevatedButton(onPressed: save, child: Text('Save')),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => saveNote(isPublic: false),
+                      child: Text('Save as Draft'),
+                    ),
+                    SizedBox(width: 20),
+                    ElevatedButton(
+                      onPressed: () => saveNote(isPublic: true),
+                      child: Text('Publish'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
